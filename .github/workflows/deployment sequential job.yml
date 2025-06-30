@@ -1,0 +1,84 @@
+name: Job Sequential Running
+#Whenever we push a commit to our repository, we run all tests (we need to find Event that triggers this workflow)
+#https://docs.github.com/en/actions/reference/events-that-trigger-workflows#push
+#npm ci - similar to npm-install - it installs a packages
+#npm test - We use it - to run the test script defined in the scripts section of the package a .json file
+#We are able to configure it that we can trigger this event (push) if we push a commit to specific branches
+#We add a next event: workflow_dispatch. We trigger this workflow manually
+on: [push, workflow_dispatch]
+#these jobs will be executed:
+#runs-on - runner - ubuntu-latest - on this runner/env this job or steps will run
+#You must get your code onto this server (ubuntu) that's provided by GitHub.
+#A step will download this code from this GitHub repo onto this runner/server - it is reason why we use a checkout action
+#run - running command, use - using an action
+#we use it -> https://github.com/marketplace/actions/checkout
+#We can configure this action - there is information on the docs.concurrency: 
+#a checkout action - action in GitHub Actions is a fundamental step in many workflows.
+#It's designed to clone a repository into the runner's workspace, 
+#allowing subsequent workflow steps to access the codebase
+#Install NodeJS -> https://github.com/actions/setup-node and configure it with specific version
+jobs:
+#first job. This job will be run on Project2 directory
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Project2
+    steps:
+      - name: Get code from GitHub into a runner machine. It ensures that our code is downloaded onto this runner machine
+        uses: actions/checkout@v3
+      - name: Install NodeJS 
+        uses: actions/setup-node@v3
+        with: 
+          node-version: 18
+      - name: Install dependencies 
+        run: npm ci 
+      - name: Run tests 
+        run: npm test
+      - name: Show all installed and available packages on ubuntu
+        run: apt list
+#second job
+#Add steps: We build this project by running a command and deploy. 
+#This job will be run on Project2 directory
+  deploy: 
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Project2
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Install NodeJS 
+        uses: actions/setup-node@v3
+        with: 
+          node-version: 18
+      - name: Install dependencies 
+        run: npm ci 
+      - name: Run tests 
+        run: npm test
+      - name: Build project
+        run: npm run build
+      - name: Deploy
+        run: echo "Deploying ..."
+#a test & a deploy jobs will run after each other
+#If a test job finished successfully, then a job deploy starts 
+#- needs: a deploy job needs a job test finishes to start running
+#a deploy job starts if a test job finishes
+
+
+#Description of first job:  
+#We can run this locally by writing these commands on the terminal.
+#But we can do it also on another environment - in your case in runner (ubuntu) on GitHub to test our code
+#We use GitHub Action and on runner (environment) to do these steps
+#Running it locally - we obtain the same output as we run it on GitHub Action
+#running locally on your directory:
+#npm install
+#npm install vite
+#npm run dev
+#exit
+#npm test
+#We obtain the same result locally like in GitHub Action all tests passed
+
+#Description of second job
+#We running these commands to run test and build scripts. Then, we run echo to display values of variables of strings
